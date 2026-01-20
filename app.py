@@ -4,7 +4,7 @@ import random
 import pandas as pd
 import os
 import time
-import db  # 匯入我們新寫的資料庫模組
+import db  # 匯入資料庫模組
 
 # --- 1. 頁面設定 ---
 st.set_page_config(
@@ -13,29 +13,88 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- 初始化資料庫 (這行一定要放在最前面，但不能放 db.add_error) ---
+# --- 初始化資料庫 ---
 db.init_db()
 
-# --- 🎨 UI 優化 (CSS) ---
+# --- 🎨 UI 優化 (CSS 強制配色版) ---
 st.markdown("""
     <style>
-    html, body, [class*="css"] { font-family: "Microsoft JhengHei", sans-serif; }
-    [data-testid="stSidebar"] { background-color: #f0f2f6; }
-    .stButton > button {
-        width: 100%; border-radius: 12px; height: 3.5em; font-size: 18px !important; font-weight: bold;
-        box-shadow: 0px 2px 5px rgba(0,0,0,0.1); transition: all 0.3s ease;
+    /* 全域字體設定 */
+    html, body, [class*="css"] { 
+        font-family: "Microsoft JhengHei", sans-serif; 
     }
-    .stButton > button:hover { transform: translateY(-2px); box-shadow: 0px 5px 10px rgba(0,0,0,0.2); }
-    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] { font-size: 18px; border-radius: 8px; }
-    h1 { color: #1E3A8A; border-bottom: 3px solid #E5E7EB; padding-bottom: 10px; }
+
+    /* --- 側邊欄專屬設定 (深色戰情風) --- */
+    [data-testid="stSidebar"] { 
+        background-color: #0f172a; /* 深藍黑色背景 */
+    }
+    
+    /* 側邊欄的所有文字強制變白 */
+    [data-testid="stSidebar"] * {
+        color: #ffffff !important;
+    }
+
+    /* 側邊欄選單按鈕優化 */
+    [data-testid="stSidebar"] .stRadio label {
+        color: #ffffff !important;
+        font-size: 18px !important;
+        padding: 10px;
+        border-radius: 8px;
+        transition: background 0.3s;
+    }
+    
+    /* 滑鼠移過去變亮一點 */
+    [data-testid="stSidebar"] .stRadio label:hover {
+        background-color: #1e293b; 
+    }
+
+    /* --- 主畫面按鈕與樣式 --- */
+    .stButton > button {
+        width: 100%; 
+        border-radius: 12px; 
+        height: 3.5em; 
+        font-size: 18px !important; 
+        font-weight: bold;
+        box-shadow: 0px 2px 5px rgba(0,0,0,0.1); 
+        transition: all 0.3s ease;
+    }
+    .stButton > button:hover { 
+        transform: translateY(-2px); 
+        box-shadow: 0px 5px 10px rgba(0,0,0,0.2); 
+    }
+    
+    .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] { 
+        font-size: 18px; 
+        border-radius: 8px; 
+    }
+    
+    h1 { 
+        color: #1E3A8A; 
+        border-bottom: 3px solid #E5E7EB; 
+        padding-bottom: 10px; 
+    }
     
     /* 錯題本卡片特效 */
-    .error-card { border-left: 5px solid #ef4444; background-color: #fef2f2; padding: 15px; border-radius: 5px; margin-bottom: 10px; }
+    .error-card { 
+        border-left: 5px solid #ef4444; 
+        background-color: #fef2f2; 
+        padding: 15px; 
+        border-radius: 5px; 
+        margin-bottom: 10px; 
+        color: #000000; /* 卡片內文字強制黑色 */
+    }
     
     /* 翻牌卡樣式 */
     .flashcard {
-        background-color: #ffffff; border: 2px solid #e0e0e0; border-radius: 15px; padding: 30px;
-        text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; margin-bottom: 20px;
+        background-color: #ffffff; 
+        border: 2px solid #e0e0e0; 
+        border-radius: 15px; 
+        padding: 30px;
+        text-align: center; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+        cursor: pointer; 
+        margin-bottom: 20px;
+        color: #000000; /* 卡片內文字強制黑色 */
     }
     .flashcard:hover { border-color: #1E3A8A; }
     </style>
@@ -56,20 +115,16 @@ def load_exam_questions():
 
 data = load_data()
 all_questions = load_exam_questions()
-
-# 從 SQLite 資料庫讀取目前的錯題 ID 列表
 current_error_ids = db.get_error_ids()
 
-# 資料分流
 choice_questions = [q for q in all_questions if q.get('type') == 'choice']
 essay_questions = [q for q in all_questions if q.get('type') == 'essay']
 df = pd.DataFrame(data) if data else pd.DataFrame()
 
 # --- 3. 側邊欄 ---
 st.sidebar.title("🛡️ 職安衛戰情中心")
-st.sidebar.caption("v10.1 智能家教版 (SQLite)")
+st.sidebar.caption("v10.2 戰情黑化版")
 
-# 顯示錯題數量 (從資料庫即時讀取)
 error_count = len(current_error_ids)
 error_label = f"📕 我的錯題本 ({error_count})" if error_count > 0 else "📕 我的錯題本"
 
@@ -77,7 +132,6 @@ page = st.sidebar.radio("學習路徑",
     ["🏠 系統首頁", "📚 章節系統學習", error_label, "🧠 術科關鍵字翻牌", "📊 戰情儀表板", "⚡ 必背數字神表", "🛠️ 術科計算神器", "🔎 法規智能檢索"]
 )
 
-# 導購連結 (財務分析師建議)
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📚 推薦備考資源")
 c1, c2 = st.sidebar.columns(2)
@@ -95,7 +149,6 @@ if page == "🏠 系統首頁":
             st.button("🚀 開始特訓！", type="primary", use_container_width=True)
         except: st.warning("請上傳 cover.png")
 
-# --- 1. 章節系統學習 (核心修改區) ---
 elif page == "📚 章節系統學習":
     st.title("📚 章節系統學習")
     
@@ -109,9 +162,7 @@ elif page == "📚 章節系統學習":
         st.success(f"【{selected_cat}】章節共有 {len(filtered_q)} 題")
         
         for i, q in enumerate(filtered_q):
-            # 檢查這題是否已經在錯題本中 (用 SQLite 檢查)
             is_in_error_log = q['id'] in current_error_ids
-            
             title_prefix = "❌ [需複習] " if is_in_error_log else ""
             
             with st.expander(f"{title_prefix}Q{q['id']}: {q['question']}"):
@@ -120,25 +171,20 @@ elif page == "📚 章節系統學習":
                 if user_ans:
                     if user_ans == q['answer']:
                         st.success("✅ **答對！**")
-                        # 如果原本在錯題本，答對後自動從資料庫移除
                         if is_in_error_log:
                             db.remove_error(q['id'])
                             st.toast(f"已將 Q{q['id']} 從錯題本移除！", icon="🎉")
                             time.sleep(0.5)
-                            st.rerun() # 重新整理以更新狀態
+                            st.rerun()
                     else:
                         st.error(f"❌ **答錯**，答案是：{q['answer']}")
-                        
-                        # 答錯自動加入資料庫
                         if not is_in_error_log:
                             db.add_error(q['id'])
                             st.toast(f"已將 Q{q['id']} 加入錯題本！", icon="📝")
                             time.sleep(0.5)
                             st.rerun()
 
-                        # --- V10.0 新功能：口訣與 AI ---
-                        if "mnemonic" in q:
-                            st.warning(f"🔑 **獨家記憶法：** {q['mnemonic']}")
+                        if "mnemonic" in q: st.warning(f"🔑 **獨家記憶法：** {q['mnemonic']}")
 
                         col_ai_1, col_ai_2 = st.columns([1, 3])
                         with col_ai_1:
@@ -147,12 +193,10 @@ elif page == "📚 章節系統學習":
                                     time.sleep(1)
                                     st.info(f"🎓 **AI 解析：**\n\n{q['explanation']}\n\n同學加油，這題是必考題喔！")
 
-# --- 📕 我的錯題本 (SQLite版) ---
 elif "📕 我的錯題本" in page:
     st.title("📕 我的錯題本")
     st.markdown("請把這裡清空，你就離考上不遠了！")
     
-    # 重新讀取一次資料庫，確保準確
     current_error_ids = db.get_error_ids()
     
     if not current_error_ids:
@@ -160,17 +204,13 @@ elif "📕 我的錯題本" in page:
         st.success("太強了！目前沒有錯題，你是職安衛戰神！🏆")
     else:
         error_qs = [q for q in choice_questions if q['id'] in current_error_ids]
-        
         st.write(f"目前累積錯題：**{len(error_qs)}** 題")
         st.progress(len(error_qs) / len(choice_questions), text="錯題率指標")
         
         for i, q in enumerate(error_qs):
             st.markdown(f"""<div class="error-card"><b>Q{q['id']}: {q['question']}</b></div>""", unsafe_allow_html=True)
-            
             col1, col2 = st.columns([3, 1])
-            with col1:
-                user_ans = st.radio("請重新作答：", q['options'], key=f"err_{q['id']}", index=None)
-            
+            with col1: user_ans = st.radio("請重新作答：", q['options'], key=f"err_{q['id']}", index=None)
             with col2:
                 st.markdown("<br>", unsafe_allow_html=True)
                 if st.button(f"✨ 我學會了", key=f"btn_remove_{q['id']}"):
@@ -180,22 +220,18 @@ elif "📕 我的錯題本" in page:
                     st.rerun()
 
             if user_ans:
-                if user_ans == q['answer']:
-                    st.success("✅ 答對了！點擊右側按鈕將此題移除。")
-                else:
+                if user_ans == q['answer']: st.success("✅ 答對了！點擊右側按鈕將此題移除。")
+                else: 
                     st.error("❌ 還是錯...再想一下！")
                     if "mnemonic" in q: st.warning(f"🔑 口訣：{q['mnemonic']}")
-            
             st.markdown("---")
 
-# --- 🧠 術科翻牌 ---
 elif page == "🧠 術科關鍵字翻牌":
     st.title("🧠 術科問答題特訓")
     if not essay_questions: st.warning("題庫中無術科題")
     else:
         if 'essay_idx' not in st.session_state: st.session_state.essay_idx = 0
         if 'is_flipped' not in st.session_state: st.session_state.is_flipped = False
-        
         if st.session_state.essay_idx >= len(essay_questions): st.session_state.essay_idx = 0
         q = essay_questions[st.session_state.essay_idx]
         
@@ -215,7 +251,6 @@ elif page == "🧠 術科關鍵字翻牌":
         if c3.button("下一題 ➡️"): 
             st.session_state.essay_idx = min(len(essay_questions) - 1, st.session_state.essay_idx + 1); st.session_state.is_flipped = False; st.rerun()
 
-# --- 📊 儀表板 ---
 elif page == "📊 戰情儀表板":
     st.title("📊 職安衛大數據分析")
     if not df.empty:
@@ -226,7 +261,6 @@ elif page == "📊 戰情儀表板":
             st.metric("總題數", f"{len(choice_questions)} 題")
             st.metric("待複習錯題", f"{len(current_error_ids)} 題", delta="需加油" if current_error_ids else "完美", delta_color="inverse")
 
-# --- ⚡ 神表 ---
 elif page == "⚡ 必背數字神表":
     st.title("⚡ 職安衛關鍵數字速查")
     df_cheat = pd.DataFrame({"類別": ["教育訓練", "設施標準", "勞基法補償", "設施標準", "設施標準", "健康保護", "化學品", "營造標準"], "項目": ["訓練紀錄保存", "護欄高度", "職災死亡補償", "固定梯平台間距", "餐廳人均面積", "急救人員比例", "GHS標示容器", "屋頂作業斜度"], "關鍵數字": ["3 年", "90 公分以上", "45 個月 (5+40)", "9 公尺", "1 平方公尺", "每 50 人置 1 人", "100 毫升以下", "34 度"]})
@@ -234,7 +268,6 @@ elif page == "⚡ 必背數字神表":
     if filter_txt: df_cheat = df_cheat[df_cheat.apply(lambda row: row.astype(str).str.contains(filter_txt).any(), axis=1)]
     st.dataframe(df_cheat, use_container_width=True, hide_index=True)
 
-# --- 🛠️ 計算 ---
 elif page == "🛠️ 術科計算神器":
     st.title("🛠️ 術科計算神器")
     type_ = st.selectbox("題型", ["時量平均濃度 (TWA)", "失能傷害頻率 (FR)"])
@@ -257,7 +290,6 @@ elif page == "🛠️ 術科計算神器":
             if st.form_submit_button("🚀 計算"): 
                 if h>0: st.success(f"FR = {(n*1000000)/h:.2f}")
 
-# --- 🔎 檢索 ---
 elif page == "🔎 法規智能檢索":
     st.title("🔎 法規智能檢索")
     query = st.text_input("輸入關鍵字", placeholder="合梯...")
